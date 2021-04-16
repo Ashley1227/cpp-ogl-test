@@ -1,11 +1,9 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include "rendering/includes.h"
+#include "global.h"
 
 #include <stb_image.h>
 
 #include "rendering/renderer/GameRenderer.h"
-
-GLFWwindow* WINDOW;
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 	glfwMakeContextCurrent(window);
@@ -32,7 +30,6 @@ int main() {
 	glfwSwapInterval(1);
 	glfwSetFramebufferSizeCallback(WINDOW, framebufferSizeCallback);
 
-
 	glewExperimental = true; // Needed for core profile
 	if (glewInit() != GLEW_OK) {
 		fprintf(stderr, "Failed to initialize GLEW\n");
@@ -54,8 +51,8 @@ int main() {
 		dt = glfwGetTime() - p;
 		p = glfwGetTime();
 
-		renderer.camera.render();
-		renderer.camera.processInput(WINDOW, dt);
+		CAMERA.render();
+		CAMERA.processInput(WINDOW, dt);
 		renderer.render(WINDOW);
 
 		glfwSwapBuffers(WINDOW);

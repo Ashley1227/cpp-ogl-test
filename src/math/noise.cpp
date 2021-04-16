@@ -1,7 +1,8 @@
 #include "noise.h"
 
 static inline int floor(float f) {
-	return (int) f;
+	int i = (int)(f);
+	return (f < i) ? (i - 1) : (i);
 }
 
 static const unsigned char perm[256] = {

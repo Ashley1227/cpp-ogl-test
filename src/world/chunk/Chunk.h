@@ -1,20 +1,13 @@
 #pragma once
 
-#include "../../rendering/VertexArray.h"
 #include "../../rendering/Mesh.h"
+#include "../../rendering/VertexArray.h"
 
-#define CHUNK_SIZE 64
-#define CHUNK_SIZE2 4096
-#define CHUNK_SIZE3 262144
+#define CHUNK_SIZE 32
+#define CHUNK_SIZE2 1024
+#define CHUNK_SIZE3 32768
 
-#define v0 4096
-#define v1 4097
-#define v2 1
-#define v3 0
-#define v4 4160
-#define v5 4161
-#define v6 65
-#define v7 64
+#define CHUNK_BOUND 32767
 
 class Chunk {
 protected:
@@ -22,11 +15,15 @@ protected:
 	static unsigned short** triTable;
 	static float vertlist[36];
 public:
+	int x,y,z;
+
 	unsigned char* blocks;
 	Mesh mesh;
 
 	Chunk();
-	Chunk(unsigned char* thing);
+	Chunk(int x, int y, int z);
+	Chunk(unsigned char* blocks);
+	Chunk(int x, int y, int z, unsigned char* blocks);
 	~Chunk();
 
 	void generate();
@@ -34,6 +31,7 @@ public:
 	void genVertexArray();
 	void genIndexArray();
 	void genMesh();
+	void regenMesh();
 
 	unsigned char getBlock(unsigned char x, unsigned char y, unsigned char z);
 	unsigned char getBlock(unsigned int index);
@@ -59,5 +57,7 @@ public:
 	static unsigned int south(unsigned int i, unsigned char n);
 
 	static unsigned int getIndex(unsigned char x, unsigned char y, unsigned char z);
+
+	static bool outOfBounds(unsigned int i);
 };
 

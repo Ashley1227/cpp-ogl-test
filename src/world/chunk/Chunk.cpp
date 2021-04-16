@@ -1,26 +1,25 @@
 #include "Chunk.h"
+#include "../../global.h"
 
-#include <iostream>
-
-#include <vector>
-#include <algorithm>
+#include <chrono>
 
 #include "../block/blocks.h"
 #include "../../math/noise.h"
 
-/*
- *  Move right  x += n
- *  Move up     y += n*CHUNK_YSIZE
- *  Move back   z += n*CHUNK_SIZE2
- */
+#define v0 1024
+#define v1 1025
+#define v2 1
+#define v3 0
+#define v4 1056
+#define v5 1057
+#define v6 33
+#define v7 32
 
-Chunk::Chunk() : blocks(new unsigned char[CHUNK_SIZE3]) {
+Chunk::Chunk(): Chunk(0,0,0, new unsigned char[CHUNK_SIZE3]) {}
+Chunk::Chunk(int x, int y, int z): Chunk(x,y,z, new unsigned char[CHUNK_SIZE3]) {}
+Chunk::Chunk(unsigned char* blocks): Chunk(0, 0, 0, blocks) {}
 
-}
-
-Chunk::Chunk(unsigned char* thing) : blocks(thing) {
-
-}
+Chunk::Chunk(int x, int y, int z, unsigned char* blocks): mesh(), x(x), y(y), z(z), blocks(blocks) {}
 
 Chunk::~Chunk() {
 	delete[] blocks;
@@ -28,27 +27,26 @@ Chunk::~Chunk() {
 
 void Chunk::generate() {
 	unsigned int i = 0;
-	float threshold = 0.5f;
+	float threshold = 32.0f;
 
-	for (unsigned char z = 0; z < CHUNK_SIZE; z++, i += CHUNK_SIZE2) {
-		for (unsigned char y = 0; y < CHUNK_SIZE; y++, i += CHUNK_SIZE) {
-			for (unsigned char x = 0; x < CHUNK_SIZE; x++, i++) {
-				setBlock(i, noise(x/30.0f, y/30.0f, z/30.0f) > threshold ? STONE : AIR);
-//				setBlock(getIndex(x,y,z), sin(x/4) > threshold && cos(z/4) > threshold ? STONE : AIR);
-//				setBlock(i, sin(x/4) > threshold && sin(y/4) > threshold && sin(z/4) > threshold ? STONE : AIR);
+	for (float z = 0; z < CHUNK_SIZE; z++, i += CHUNK_SIZE2) {
+		for (float y = 0; y < CHUNK_SIZE; y++, i += CHUNK_SIZE) {
+			for (float x = 0; x < CHUNK_SIZE; x++, i++) {
+//				setBlock(i, noise((x + this->x)/30.0f, (y + this->y)/30.0f, (z + this->z)/30.0f) > threshold ? STONE : AIR);
+				setBlock(i, y + this->y > noise((x + this->x)/60.0f, (z + this->z)/60.0f) * 10.0f + 10.0f ? AIR : STONE);
 			}
 			i -= CHUNK_SIZE;
 		}
 		i -= CHUNK_SIZE2;
 	}
 }
-
+void Chunk::regenMesh() {
+	genMesh();
+}
 void Chunk::genMesh() {
-	printy();
-//	genVertexArray();
-//	genIndexArray();
-	float* va = new float[CHUNK_SIZE3 * 15];
-//	unsigned int* ia = new unsigned int[CHUNK_SIZE3];
+	const auto time = std::chrono::system_clock::now();
+
+    float* va = new float[CHUNK_SIZE3 * 15];
 
 	unsigned int i = 0;
 	unsigned int j = 0;
@@ -56,36 +54,36 @@ void Chunk::genMesh() {
 	for (unsigned char z = 0; z < CHUNK_SIZE; z++, i += CHUNK_SIZE2) {
 		for (unsigned char y = 0; y < CHUNK_SIZE; y++, i += CHUNK_SIZE) {
 			for (unsigned char x = 0; x < CHUNK_SIZE; x++, i++) {
-				int cubeindex = 0;
-				if (getBlock(i + v0)) cubeindex |= 1;
-				if (getBlock(i + v1)) cubeindex |= 2;
-				if (getBlock(i + v2)) cubeindex |= 4;
-				if (getBlock(i + v3)) cubeindex |= 8;
-				if (getBlock(i + v4)) cubeindex |= 16;
-				if (getBlock(i + v5)) cubeindex |= 32;
-				if (getBlock(i + v6)) cubeindex |= 64;
-				if (getBlock(i + v7)) cubeindex |= 128;
+				int cubeIndex = 0;
+				if (!outOfBounds(i + v0) && getBlock(i + v0)) cubeIndex |= 1;
+				if (!outOfBounds(i + v1) && getBlock(i + v1)) cubeIndex |= 2;
+				if (!outOfBounds(i + v2) && getBlock(i + v2)) cubeIndex |= 4;
+				if (!outOfBounds(i + v3) && getBlock(i + v3)) cubeIndex |= 8;
+				if (!outOfBounds(i + v4) && getBlock(i + v4)) cubeIndex |= 16;
+				if (!outOfBounds(i + v5) && getBlock(i + v5)) cubeIndex |= 32;
+				if (!outOfBounds(i + v6) && getBlock(i + v6)) cubeIndex |= 64;
+				if (!outOfBounds(i + v7) && getBlock(i + v7)) cubeIndex |= 128;
 
 				/* Cube is entirely in/out of the surface */
-				if (edgeTable[cubeindex] == 0)
+				if (edgeTable[cubeIndex] == 0)
 					continue;
 
-				for (unsigned char k = 0; k < triTable[cubeindex][0]; k += 3, j += 15) {
-					va[j]   = x + vertlist[triTable[cubeindex][k+1]];
-					va[j+1] = y + vertlist[triTable[cubeindex][k+1]+1];
-					va[j+2] = z + vertlist[triTable[cubeindex][k+1]+2];
+				for (unsigned char k = 0; k < triTable[cubeIndex][0]; k += 3, j += 15) {
+					va[j]   = this->x + x + vertlist[triTable[cubeIndex][k + 1]];
+					va[j+1] = this->y + y + vertlist[triTable[cubeIndex][k + 1] + 1];
+					va[j+2] = this->z + z + vertlist[triTable[cubeIndex][k + 1] + 2];
 					va[j+3] = 0;
 					va[j+4] = 0;
 
-					va[j+5] = x + vertlist[triTable[cubeindex][k+2]];
-					va[j+6] = y + vertlist[triTable[cubeindex][k+2]+1];
-					va[j+7] = z + vertlist[triTable[cubeindex][k+2]+2];
+					va[j+5] = this->x + x + vertlist[triTable[cubeIndex][k + 2]];
+					va[j+6] = this->y + y + vertlist[triTable[cubeIndex][k + 2] + 1];
+					va[j+7] = this->z + z + vertlist[triTable[cubeIndex][k + 2] + 2];
 					va[j+8] = 0;
 					va[j+9] = 0;
 
-					va[j+10] = x + vertlist[triTable[cubeindex][k+3]];
-					va[j+11] = y + vertlist[triTable[cubeindex][k+3]+1];
-					va[j+12] = z + vertlist[triTable[cubeindex][k+3]+2];
+					va[j+10] = this->x + x + vertlist[triTable[cubeIndex][k + 3]];
+					va[j+11] = this->y + y + vertlist[triTable[cubeIndex][k + 3] + 1];
+					va[j+12] = this->z + z + vertlist[triTable[cubeIndex][k + 3] + 2];
 					va[j+13] = 0;
 					va[j+14] = 0;
 				}
@@ -94,13 +92,11 @@ void Chunk::genMesh() {
 		}
 		i -= CHUNK_SIZE2;
 	}
+	mesh.vertexArray.size = j*sizeof(float);
+	mesh.vertexArray.length = j;
+	mesh.vertexArray.data = va;
 
-	float* small = new float[j];
-	memcpy(small, va, j * sizeof(float));
-	delete[] va;
-
-	mesh.vertexArray.size = j;
-	mesh.vertexArray.raw = small;
+	printf("%.1fmb chunk mesh generated in %dms\n", j*sizeof(float) / 1'000'000.0f, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - time));
 }
 
 void Chunk::setBlock(unsigned char x, unsigned char y, unsigned char z, unsigned char block) {
@@ -123,29 +119,23 @@ unsigned int Chunk::getIndex(unsigned char x, unsigned char y, unsigned char z) 
 	return (z * CHUNK_SIZE2) + (y * CHUNK_SIZE) + x;
 }
 
-
 unsigned int Chunk::up(unsigned int i) {
 	return i + CHUNK_SIZE;
 }
-
 unsigned int Chunk::up(unsigned int i, unsigned char n) {
 	return i + n * CHUNK_SIZE;
 }
 
-
 unsigned int Chunk::down(unsigned int i) {
 	return i - CHUNK_SIZE;
 }
-
 unsigned int Chunk::down(unsigned int i, unsigned char n) {
 	return i - n * CHUNK_SIZE;
 }
 
-
 unsigned int Chunk::east(unsigned int i) {
 	return i + 1;
 }
-
 unsigned int Chunk::east(unsigned int i, unsigned char n) {
 	return i + n;
 }
@@ -153,16 +143,13 @@ unsigned int Chunk::east(unsigned int i, unsigned char n) {
 unsigned int Chunk::west(unsigned int i) {
 	return i - 1;
 }
-
 unsigned int Chunk::west(unsigned int i, unsigned char n) {
 	return i - n;
 }
 
-
 unsigned int Chunk::north(unsigned int i) {
 	return i + CHUNK_SIZE2;
 }
-
 unsigned int Chunk::north(unsigned int i, unsigned char n) {
 	return i + n * CHUNK_SIZE2;
 }
@@ -170,9 +157,12 @@ unsigned int Chunk::north(unsigned int i, unsigned char n) {
 unsigned int Chunk::south(unsigned int i) {
 	return i - CHUNK_SIZE2;
 }
-
 unsigned int Chunk::south(unsigned int i, unsigned char n) {
 	return i - n * CHUNK_SIZE2;
+}
+
+bool Chunk::outOfBounds(unsigned int i) {
+    return i > CHUNK_BOUND;
 }
 
 float Chunk::vertlist[36] = {

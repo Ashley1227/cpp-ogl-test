@@ -1,21 +1,17 @@
 #pragma once
 
-#include <vector>
-
 class VertexArray {
 public:
 	/// size in bytes
 	unsigned int size;
-	float* raw;
+	/// length of the array
+	unsigned int length;
+	float* data;
 
-	VertexArray(): VertexArray(0, 0) {}
-	VertexArray(unsigned int size, float* data): size(size), raw(data) {}
-
-	~VertexArray() {
-		delete[] raw;
-	}
+	VertexArray();
+	VertexArray(unsigned int size, unsigned int length, float* data);
 
 	operator float*() const {
-		return raw;
+		return data;
 	}
 };

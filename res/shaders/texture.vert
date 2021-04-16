@@ -6,7 +6,6 @@ out vec2 texCoord;
 out float depth;
 
 uniform mat4 mvp;
-uniform float time;
 
 void main()
 {
